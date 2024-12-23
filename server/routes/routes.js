@@ -5,6 +5,8 @@ import upload from '../utils/upload.js';
 const router = express.Router();
 
 // Routes
+router.get('/',(req,res)=>{
+  res.send("Hello World")}
 router.post('/upload', upload.single('file'), uploadFile);
 router.get('/file/:fileId', downloadImage);
 
