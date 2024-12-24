@@ -7,7 +7,11 @@ import router from './routes/routes.js';
 dotenv.config(); // Place dotenv config at the top
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'https://your-frontend-domain.vercel.app'], // Add your frontend origins here
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Add allowed HTTP methods
+  credentials: true, // If you need cookies or authorization headers
+}));
 
 app.use('/', router);
 
