@@ -7,7 +7,7 @@ const BASE_URL = process.env.BASE_URL || 'http://localhost:8000'; // Default to 
 
 export const uploadFile = async (req, res) => {
   const fileObject = {
-    path: `uploads/${req.file.filename}`,
+    path: `/tmp/${req.file.filename}`, // Use /tmp for Vercel
     name: req.file.originalname,
     type: req.file.mimetype,
     size: req.file.size,
@@ -56,6 +56,7 @@ export const downloadImage = async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
 
 
 const deleteOldFiles = async () => {
