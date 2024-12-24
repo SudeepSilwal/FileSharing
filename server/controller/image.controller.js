@@ -1,49 +1,54 @@
 import File from "../models/file.js";
 import path from 'path';
 import fs from 'fs';
+import { promises as fsPromises } from 'fs';
+
+const BASE_URL = process.env.BASE_URL || 'http://localhost:8000'; // Default to localhost in development
 
 export const uploadFile = async (req, res) => {
   const fileObject = {
-    path: `uploads/${req.file.filename}`, // Save the file path
-    name: req.file.originalname, // Save the original name
+    path: `uploads/${req.file.filename}`,
+    name: req.file.originalname,
     type: req.file.mimetype,
     size: req.file.size,
-    uploadedAt: Date.now(),  // Add the timestamp for when the file was uploaded
+    uploadedAt: Date.now(),
   };
 
   try {
-    const file = await File.create(fileObject); // Store the file info in DB
+    const file = await File.create(fileObject);
     res.status(200).json({
-      path: `${process.env.BASE_URL}/file/${file._id}`, // Provide the link to download the file
+      path: `${BASE_URL}/file/${file._id}`,
     });
   } catch (error) {
     console.log("Error in uploading file", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
 export const downloadImage = async (req, res) => {
   try {
-    // Find the file based on the file ID passed in the URL
     const file = await File.findById(req.params.fileId);
-
     if (!file) {
       return res.status(404).json({ message: 'File not found' });
     }
 
-    // Resolve the file path
-    const absolutePath = path.resolve(file.path); // This resolves to 'uploads/filename.ext'
+    const absolutePath = path.resolve(file.path);
 
-    // Check if the file exists on the server
-    if (!fs.existsSync(absolutePath)) {
+    try {
+      await fs.promises.access(absolutePath);
+    } catch (error) {
       return res.status(404).json({ message: 'File not found on the server' });
     }
 
-    // Send the file for download
-    res.download(absolutePath, file.name, (err) => {
+    // Buffer the file and send as response
+    fs.readFile(absolutePath, (err, data) => {
       if (err) {
-        console.error('Error in downloading file:', err.message);
-        return res.status(500).json({ message: 'Could not download the file' });
+        console.error('Error reading file:', err.message);
+        return res.status(500).json({ message: 'Error reading the file' });
       }
+      res.setHeader('Content-Disposition', `attachment; filename=${file.name}`);
+      res.setHeader('Content-Type', file.type);
+      res.send(data); // Send the buffered file data
     });
 
   } catch (error) {
@@ -51,33 +56,31 @@ export const downloadImage = async (req, res) => {
     return res.status(500).json({ message: 'Internal Server Error' });
   }
 };
+
+
 const deleteOldFiles = async () => {
   try {
-      const files = await File.find();
+    const now = Date.now();
+    // Filter files older than 15 minutes
+    const files = await File.find({ uploadedAt: { $lt: now - 15 * 60 * 1000 } });
 
-      // Current time
-      const now = Date.now();
-
-      // Loop through each file and check if it is older than 15 minutes
-      for (const file of files) {
-          const fileAge = now - new Date(file.uploadedAt).getTime();
-          if (fileAge > 15 * 60 * 1000) { // 15 minutes in milliseconds
-              // Delete the file from the server
-              const filePath = path.resolve(file.path);
-              if (fs.existsSync(filePath)) {
-                  fs.unlinkSync(filePath); // Remove file
-                  console.log(`Deleted file: ${file.name}`);
-              }
-
-              // Remove the file record from the database
-              await File.findByIdAndDelete(file._id);
-              console.log(`Deleted file record: ${file.name}`);
-          }
+    for (const file of files) {
+      const filePath = path.resolve(file.path);
+      try {
+        await fsPromises.access(filePath); // Check file existence asynchronously
+        await fsPromises.unlink(filePath); // Delete file
+        console.log(`Deleted file: ${file.name}`);
+      } catch (error) {
+        console.log(`Error deleting file: ${file.name}`, error.message);
       }
+
+      await File.findByIdAndDelete(file._id);
+      console.log(`Deleted file record: ${file.name}`);
+    }
   } catch (error) {
-      console.error('Error deleting old files:', error.message);
+    console.error('Error deleting old files:', error.message);
   }
 };
 
 // Run the function every minute
-setInterval(deleteOldFiles, 60 * 1000); // Check every minute
+setInterval(deleteOldFiles, 60 * 1000);

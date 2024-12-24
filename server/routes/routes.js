@@ -7,8 +7,5 @@ const router = express.Router();
 // Routes
 router.post('/upload', upload.single('file'), uploadFile);
 router.get('/file/:fileId', downloadImage);
-router.get('/',(req,res)=>{
-    res.send("Hello World")
-})
 
 export default router;

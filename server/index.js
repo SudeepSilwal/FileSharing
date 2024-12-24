@@ -4,22 +4,17 @@ import dotenv from 'dotenv';
 import dbConnection from './db/db.js';
 import router from './routes/routes.js';
 
-// Load environment variables
-dotenv.config();
+dotenv.config(); // Place dotenv config at the top
 
 const app = express();
-
-// Middleware
 app.use(cors());
-app.use(express.json()); // To handle JSON payloads
 
-// Connect to the database
-dbConnection();
-
-// Routes
 app.use('/', router);
 
 const PORT = process.env.PORT || 8000;
+
+// Connect to the database
+dbConnection();
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
