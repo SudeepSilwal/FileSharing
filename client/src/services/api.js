@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = 'http://localhost:8000';
 
 export const uploadFile = async (data) => {
   try {
@@ -8,6 +8,6 @@ export const uploadFile = async (data) => {
     console.log(response.data);
     return response.data;
   } catch (error) {
-    console.error('Error while fetching the API', error.message);
+    console.error("Error while fetching the Api",error.message);
   }
-};
+}; 
